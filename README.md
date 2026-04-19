@@ -1,6 +1,6 @@
-# high-flop-tomfooleries
+# High-Flop-Tomfooleries (HFT)
 
-Pretraining experiments using [torchtitan](https://github.com/pytorch/torchtitan).
+Pretraining experiments using [torchtitan](https://github.com/pytorch/torchtitan). Not to be confused with [High-Frequency-Trading](https://en.wikipedia.org/wiki/High-frequency_trading)
 
 ## Setup
 

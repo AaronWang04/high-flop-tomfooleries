@@ -228,30 +228,18 @@ def _apply_fsdp(
         reshard_after_forward_policy, pp_enabled
     )
 
-    if getattr(model, "enable_weight_tying", False):
-        modules = [
-            m
-            for m in (model.tok_embeddings, model.norm, model.output)
-            if m is not None
-        ]
+    if model.tok_embeddings is not None:
         fully_shard(
-            modules,
+            model.tok_embeddings,
+            **fsdp_config,
+            reshard_after_forward=reshard_after_forward,
+        )
+    if model.norm is not None and model.output is not None:
+        fully_shard(
+            [model.norm, model.output],
             **fsdp_config,
             reshard_after_forward=reshard_after_forward_policy == "always",
         )
-    else:
-        if model.tok_embeddings is not None:
-            fully_shard(
-                model.tok_embeddings,
-                **fsdp_config,
-                reshard_after_forward=reshard_after_forward,
-            )
-        if model.norm is not None and model.output is not None:
-            fully_shard(
-                [model.norm, model.output],
-                **fsdp_config,
-                reshard_after_forward=reshard_after_forward_policy == "always",
-            )
 
     for layer_id, transformer_block in model.layers.items():
         fully_shard(
