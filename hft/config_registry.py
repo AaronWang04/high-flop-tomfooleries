@@ -13,7 +13,7 @@ from . import model_registry
 _SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def hft_8b() -> Trainer.Config:
+def hft_llama_8b() -> Trainer.Config:
     return Trainer.Config(
         hf_assets_path=os.path.join(_SCRIPT_DIR, "assets", "hf", "Llama-3.1-8B"),
         model_spec=model_registry("8B"),
@@ -23,10 +23,28 @@ def hft_8b() -> Trainer.Config:
             seq_len=8192,
             steps=1000,
         ),
-        dataloader=HuggingFaceTextDataLoader.Config(dataset="c4"),
+        dataloader=HuggingFaceTextDataLoader.Config(dataset="fineweb"),
         metrics=MetricsProcessor.Config(enable_tensorboard=True),
         profiler=Profiler.Config(enable_profiling=True, profile_freq=100),
-        checkpoint=CheckpointManager.Config(interval=500),
+        checkpoint=CheckpointManager.Config(enable=True, interval=500),
+        activation_checkpoint=ActivationCheckpointConfig(mode="selective"),
+    )
+
+
+def hft_qwen3_8b() -> Trainer.Config:
+    return Trainer.Config(
+        hf_assets_path=os.path.join(_SCRIPT_DIR, "assets", "hf", "Qwen3-8B"),
+        model_spec=model_registry("qwen3-8B"),
+        optimizer=OptimizersContainer.Config(lr=3e-4),
+        training=TrainingConfig(
+            local_batch_size=1,
+            seq_len=8192,
+            steps=1000,
+        ),
+        dataloader=HuggingFaceTextDataLoader.Config(dataset="fineweb"),
+        metrics=MetricsProcessor.Config(enable_tensorboard=True),
+        profiler=Profiler.Config(enable_profiling=True, profile_freq=100),
+        checkpoint=CheckpointManager.Config(enable=True, interval=500),
         activation_checkpoint=ActivationCheckpointConfig(mode="selective"),
     )
 
@@ -41,9 +59,27 @@ def hft_qwen35_9b() -> Trainer.Config:
             seq_len=8192,
             steps=1000,
         ),
-        dataloader=HuggingFaceTextDataLoader.Config(dataset="c4"),
+        dataloader=HuggingFaceTextDataLoader.Config(dataset="fineweb"),
         metrics=MetricsProcessor.Config(enable_tensorboard=True),
         profiler=Profiler.Config(enable_profiling=True, profile_freq=100),
-        checkpoint=CheckpointManager.Config(interval=500),
+        checkpoint=CheckpointManager.Config(enable=True, interval=5000, keep_latest_k=3),
+        activation_checkpoint=ActivationCheckpointConfig(mode="selective"),
+    )
+
+
+def hft_qwen35_9b_real() -> Trainer.Config:
+    return Trainer.Config(
+        hf_assets_path=os.path.join(_SCRIPT_DIR, "assets", "hf", "Qwen3.5-9B"),
+        model_spec=model_registry("qwen35-9B-real"),
+        optimizer=OptimizersContainer.Config(lr=3e-4),
+        training=TrainingConfig(
+            local_batch_size=1,
+            seq_len=4096,
+            steps=1_000_000,
+        ),
+        dataloader=HuggingFaceTextDataLoader.Config(dataset="fineweb"),
+        metrics=MetricsProcessor.Config(enable_tensorboard=True),
+        profiler=Profiler.Config(enable_profiling=True, profile_freq=100),
+        checkpoint=CheckpointManager.Config(enable=True, interval=500),
         activation_checkpoint=ActivationCheckpointConfig(mode="selective"),
     )

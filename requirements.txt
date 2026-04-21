@@ -1,1 +1,2 @@
 torchtitan==0.2.2
+flash-linear-attention

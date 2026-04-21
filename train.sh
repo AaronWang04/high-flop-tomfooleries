@@ -6,7 +6,7 @@ set -ex
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 NGPU=${NGPU:-4}
-CONFIG=${CONFIG:-"hft_qwen35_9b"}
+CONFIG=${CONFIG:-"hft_qwen3_8b"}
 export LOG_RANK=${LOG_RANK:-0}
 export PYTHONPATH="${SCRIPT_DIR}:${PYTHONPATH}"
 

@@ -1,6 +1,8 @@
 #!/usr/bin/bash
 # One-time setup for pretraining
-set -e
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    set -e
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -15,6 +17,9 @@ huggingface-cli download Qwen/Qwen3-8B tokenizer.json tokenizer_config.json merg
 
 huggingface-cli download meta-llama/Llama-3.1-8B tokenizer.json tokenizer_config.json special_tokens_map.json original/tokenizer.model \
     --local-dir "${SCRIPT_DIR}/assets/hf/Llama-3.1-8B"
+
+huggingface-cli download Qwen/Qwen3.5-9B tokenizer.json tokenizer_config.json merges.txt vocab.json \
+    --local-dir "${SCRIPT_DIR}/assets/hf/Qwen3.5-9B"
 
 # --- Output dirs ---
 mkdir -p "${SCRIPT_DIR}/outputs"

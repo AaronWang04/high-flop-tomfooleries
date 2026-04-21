@@ -20,7 +20,9 @@ from torchtitan.models.common.param_init import depth_scaled_std
 from torchtitan.protocols.model_spec import ModelSpec
 
 from .model import HFTModel, HFTTransformerBlock
-from .parallelize import parallelize_hft
+from .modules import GatedDeltaNetAttention, GemmaRMSNorm, Qwen35FullAttention
+from .parallelize import parallelize_hft, parallelize_qwen35
+from .qwen35 import Qwen35FullAttentionBlock, Qwen35LinearAttentionBlock, Qwen35Model
 
 _LINEAR_INIT = {
     "weight": partial(nn.init.trunc_normal_, std=0.02),
@@ -178,12 +180,49 @@ def _8b(attn_backend: str = "sdpa") -> HFTModel.Config:
     )
 
 
-def _qwen35_9b(attn_backend: str = "sdpa") -> HFTModel.Config:
-    """Qwen3.5-9B: Qwen3 architecture, ~9B params.
+def _qwen3_8b(attn_backend: str = "sdpa") -> HFTModel.Config:
+    """Qwen3-8B architecture."""
+    dim = 4096
+    head_dim = 128
+    n_heads = 32
+    n_kv_heads = 8
+    n_layers = 36
+    hidden_dim = 12288
+    vocab_size = 151936
+    return HFTModel.Config(
+        dim=dim,
+        vocab_size=vocab_size,
+        tok_embeddings=Embedding.Config(
+            num_embeddings=vocab_size,
+            embedding_dim=dim,
+            param_init=_EMBEDDING_INIT,
+        ),
+        norm=_qwen3_norm(dim),
+        output=Linear.Config(
+            in_features=dim,
+            out_features=vocab_size,
+            param_init=_output_linear_init(dim),
+        ),
+        rope=RoPE.Config(
+            dim=head_dim,
+            max_seq_len=4096,
+            theta=1_000_000.0,
+            backend="cos_sin",
+        ),
+        layers=_build_qwen3_layers(
+            n_layers=n_layers,
+            dim=dim,
+            n_heads=n_heads,
+            n_kv_heads=n_kv_heads,
+            head_dim=head_dim,
+            hidden_dim=hidden_dim,
+            attn_backend=attn_backend,
+        ),
+    )
 
-    Interpolates between Qwen3 8B (36 layers) and 14B (40 layers),
-    keeping the 8B width with the 14B depth for ~9.0B total parameters.
-    """
+
+def _qwen35_9b(attn_backend: str = "sdpa") -> HFTModel.Config:
+    """Qwen3.5-9B: Qwen3 8B width with 14B depth, ~9B params."""
     dim = 4096
     head_dim = 128
     n_heads = 32
@@ -223,9 +262,112 @@ def _qwen35_9b(attn_backend: str = "sdpa") -> HFTModel.Config:
     )
 
 
+# --- Qwen3.5 real architecture (hybrid: GatedDeltaNet + gated full attention) ---
+
+_QWEN35_EPS = 1e-6
+_QWEN35_LAYER_PATTERN = ["linear_attention"] * 3 + ["full_attention"]
+
+
+def _gemma_norm(dim: int) -> GemmaRMSNorm.Config:
+    return GemmaRMSNorm.Config(normalized_shape=dim, eps=_QWEN35_EPS)
+
+
+def _build_qwen35_real_layers(
+    *,
+    dim: int = 4096,
+    n_layers: int = 32,
+    full_attn_n_heads: int = 16,
+    full_attn_n_kv_heads: int = 4,
+    full_attn_head_dim: int = 256,
+    linear_n_k_heads: int = 16,
+    linear_n_v_heads: int = 32,
+    linear_key_head_dim: int = 128,
+    linear_value_head_dim: int = 128,
+    linear_conv_kernel: int = 4,
+    hidden_dim: int = 12288,
+) -> list:
+    layers = []
+    for i in range(n_layers):
+        layer_type = _QWEN35_LAYER_PATTERN[i % len(_QWEN35_LAYER_PATTERN)]
+
+        ffn = make_ffn_config(
+            dim=dim,
+            hidden_dim=hidden_dim,
+            w1_param_init=_LINEAR_INIT,
+            w2w3_param_init=_depth_init(i),
+        )
+
+        if layer_type == "full_attention":
+            layers.append(Qwen35FullAttentionBlock.Config(
+                attention_norm=_gemma_norm(dim),
+                ffn_norm=_gemma_norm(dim),
+                attention=Qwen35FullAttention.Config(
+                    dim=dim,
+                    n_heads=full_attn_n_heads,
+                    n_kv_heads=full_attn_n_kv_heads,
+                    head_dim=full_attn_head_dim,
+                    eps=_QWEN35_EPS,
+                ),
+                feed_forward=ffn,
+            ))
+        else:
+            layers.append(Qwen35LinearAttentionBlock.Config(
+                attention_norm=_gemma_norm(dim),
+                ffn_norm=_gemma_norm(dim),
+                attention=GatedDeltaNetAttention.Config(
+                    dim=dim,
+                    n_k_heads=linear_n_k_heads,
+                    n_v_heads=linear_n_v_heads,
+                    key_head_dim=linear_key_head_dim,
+                    value_head_dim=linear_value_head_dim,
+                    conv_kernel=linear_conv_kernel,
+                    eps=_QWEN35_EPS,
+                ),
+                feed_forward=ffn,
+            ))
+
+    return layers
+
+
+def _qwen35_9b_real(attn_backend: str = "sdpa") -> Qwen35Model.Config:
+    """Real Qwen3.5-9B: hybrid GatedDeltaNet + gated full attention."""
+    dim = 4096
+    head_dim = 256
+    partial_rotary_factor = 0.25
+    rotary_dim = int(head_dim * partial_rotary_factor)
+    vocab_size = 248320
+    return Qwen35Model.Config(
+        dim=dim,
+        vocab_size=vocab_size,
+        head_dim=head_dim,
+        partial_rotary_factor=partial_rotary_factor,
+        rope_theta=1e7,
+        tok_embeddings=Embedding.Config(
+            num_embeddings=vocab_size,
+            embedding_dim=dim,
+            param_init=_EMBEDDING_INIT,
+        ),
+        norm=_gemma_norm(dim),
+        output=Linear.Config(
+            in_features=dim,
+            out_features=vocab_size,
+            param_init=_output_linear_init(dim),
+        ),
+        rope=RoPE.Config(
+            dim=rotary_dim,
+            max_seq_len=8192,
+            theta=1e7,
+            backend="cos_sin",
+        ),
+        layers=_build_qwen35_real_layers(),
+    )
+
+
 hft_configs = {
     "8B": _8b,
+    "qwen3-8B": _qwen3_8b,
     "qwen35-9B": _qwen35_9b,
+    "qwen35-9B-real": _qwen35_9b_real,
 }
 
 
@@ -234,11 +376,12 @@ def model_registry(
     attn_backend: str = "sdpa",
 ) -> ModelSpec:
     config = hft_configs[flavor](attn_backend=attn_backend)
+    par_fn = parallelize_qwen35 if flavor == "qwen35-9B-real" else parallelize_hft
     return ModelSpec(
         name="hft",
         flavor=flavor,
         model=config,
-        parallelize_fn=parallelize_hft,
+        parallelize_fn=par_fn,
         pipelining_fn=None,
         build_loss_fn=build_cross_entropy_loss,
         post_optimizer_build_fn=None,

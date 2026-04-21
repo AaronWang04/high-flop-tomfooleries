@@ -11,8 +11,11 @@ pip install -r requirements.txt
 Download tokenizers (requires `HF_TOKEN` or login with `huggingface-cli login`):
 
 ```bash
-# Qwen3 (for Qwen3.5-9B)
+# Qwen3 (for Qwen3-8B)
 huggingface-cli download Qwen/Qwen3-8B tokenizer.json tokenizer_config.json merges.txt vocab.json --local-dir assets/hf/Qwen3-8B
+
+# Qwen3.5 (for Qwen3.5-9B real)
+huggingface-cli download Qwen/Qwen3.5-9B tokenizer.json tokenizer_config.json merges.txt vocab.json --local-dir assets/hf/Qwen3.5-9B
 
 # Llama 3.1 (for Llama 8B)
 huggingface-cli download meta-llama/Llama-3.1-8B tokenizer.json tokenizer_config.json special_tokens_map.json original/tokenizer.model --local-dir assets/hf/Llama-3.1-8B
@@ -21,11 +24,14 @@ huggingface-cli download meta-llama/Llama-3.1-8B tokenizer.json tokenizer_config
 ## Training
 
 ```bash
-# Qwen3.5-9B (default)
+# Qwen3-8B (default)
 bash train.sh
 
 # Llama 8B
-CONFIG=hft_8b bash train.sh
+CONFIG=hft_llama_8b bash train.sh
+
+# Qwen3.5-9B (real hybrid architecture)
+CONFIG=hft_qwen35_9b_real bash train.sh
 ```
 
 Config params
