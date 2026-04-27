@@ -19,9 +19,9 @@ from torchtitan.models.common.config_utils import (
 from torchtitan.models.common.param_init import depth_scaled_std
 from torchtitan.protocols.model_spec import ModelSpec
 
-from .model import HFTModel, HFTTransformerBlock
+from .model import Model, TransformerBlock
 from .modules import GatedDeltaNetAttention, GemmaRMSNorm, Qwen35FullAttention
-from .parallelize import parallelize_hft, parallelize_qwen35
+from .parallelize import parallelize, parallelize_qwen35
 from .qwen35 import Qwen35FullAttentionBlock, Qwen35LinearAttentionBlock, Qwen35Model
 
 _LINEAR_INIT = {
@@ -59,10 +59,10 @@ def _build_llama_layers(
     hidden_dim: int,
     n_kv_heads: int | None = None,
     attn_backend: str = "sdpa",
-) -> list[HFTTransformerBlock.Config]:
+) -> list[TransformerBlock.Config]:
     inner_attention, mask_type = get_attention_config(attn_backend)
     return [
-        HFTTransformerBlock.Config(
+        TransformerBlock.Config(
             attention_norm=RMSNorm.Config(
                 normalized_shape=dim, param_init=_NORM_INIT
             ),
@@ -108,10 +108,10 @@ def _build_qwen3_layers(
     head_dim: int,
     hidden_dim: int,
     attn_backend: str = "sdpa",
-) -> list[HFTTransformerBlock.Config]:
+) -> list[TransformerBlock.Config]:
     inner_attention, mask_type = get_attention_config(attn_backend)
     return [
-        HFTTransformerBlock.Config(
+        TransformerBlock.Config(
             attention_norm=_qwen3_norm(dim),
             ffn_norm=_qwen3_norm(dim),
             attention=make_gqa_config(
@@ -139,14 +139,14 @@ def _build_qwen3_layers(
 
 # --- Model configs ---
 
-def _8b(attn_backend: str = "sdpa") -> HFTModel.Config:
+def _8b(attn_backend: str = "sdpa") -> Model.Config:
     """Llama 3.1 8B architecture."""
     dim = 4096
     n_heads = 32
     n_kv_heads = 8
     n_layers = 32
     vocab_size = 128256
-    return HFTModel.Config(
+    return Model.Config(
         dim=dim,
         vocab_size=vocab_size,
         tok_embeddings=Embedding.Config(
@@ -180,7 +180,7 @@ def _8b(attn_backend: str = "sdpa") -> HFTModel.Config:
     )
 
 
-def _qwen3_8b(attn_backend: str = "sdpa") -> HFTModel.Config:
+def _qwen3_8b(attn_backend: str = "sdpa") -> Model.Config:
     """Qwen3-8B architecture."""
     dim = 4096
     head_dim = 128
@@ -189,7 +189,7 @@ def _qwen3_8b(attn_backend: str = "sdpa") -> HFTModel.Config:
     n_layers = 36
     hidden_dim = 12288
     vocab_size = 151936
-    return HFTModel.Config(
+    return Model.Config(
         dim=dim,
         vocab_size=vocab_size,
         tok_embeddings=Embedding.Config(
@@ -221,7 +221,7 @@ def _qwen3_8b(attn_backend: str = "sdpa") -> HFTModel.Config:
     )
 
 
-def _qwen35_9b(attn_backend: str = "sdpa") -> HFTModel.Config:
+def _qwen35_9b(attn_backend: str = "sdpa") -> Model.Config:
     """Qwen3.5-9B: Qwen3 8B width with 14B depth, ~9B params."""
     dim = 4096
     head_dim = 128
@@ -230,7 +230,7 @@ def _qwen35_9b(attn_backend: str = "sdpa") -> HFTModel.Config:
     n_layers = 40
     hidden_dim = 12288
     vocab_size = 151936
-    return HFTModel.Config(
+    return Model.Config(
         dim=dim,
         vocab_size=vocab_size,
         tok_embeddings=Embedding.Config(
@@ -363,7 +363,7 @@ def _qwen35_9b_real(attn_backend: str = "sdpa") -> Qwen35Model.Config:
     )
 
 
-hft_configs = {
+_configs = {
     "8B": _8b,
     "qwen3-8B": _qwen3_8b,
     "qwen35-9B": _qwen35_9b,
@@ -375,10 +375,10 @@ def model_registry(
     flavor: str,
     attn_backend: str = "sdpa",
 ) -> ModelSpec:
-    config = hft_configs[flavor](attn_backend=attn_backend)
-    par_fn = parallelize_qwen35 if flavor == "qwen35-9B-real" else parallelize_hft
+    config = _configs[flavor](attn_backend=attn_backend)
+    par_fn = parallelize_qwen35 if flavor == "qwen35-9B-real" else parallelize
     return ModelSpec(
-        name="hft",
+        name="models",
         flavor=flavor,
         model=config,
         parallelize_fn=par_fn,

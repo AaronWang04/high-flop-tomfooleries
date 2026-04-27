@@ -1,2 +1,2 @@
-torchtitan==0.2.2
+# TorchTitan nightly and Megatron-LM are installed as editable local clones via setup.sh.
 flash-linear-attention

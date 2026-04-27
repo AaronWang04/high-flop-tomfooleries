@@ -13,7 +13,7 @@ from . import model_registry
 _SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def hft_llama_8b() -> Trainer.Config:
+def llama3_8b() -> Trainer.Config:
     return Trainer.Config(
         hf_assets_path=os.path.join(_SCRIPT_DIR, "assets", "hf", "Llama-3.1-8B"),
         model_spec=model_registry("8B"),
@@ -31,7 +31,7 @@ def hft_llama_8b() -> Trainer.Config:
     )
 
 
-def hft_qwen3_8b() -> Trainer.Config:
+def qwen3_8b() -> Trainer.Config:
     return Trainer.Config(
         hf_assets_path=os.path.join(_SCRIPT_DIR, "assets", "hf", "Qwen3-8B"),
         model_spec=model_registry("qwen3-8B"),
@@ -49,7 +49,7 @@ def hft_qwen3_8b() -> Trainer.Config:
     )
 
 
-def hft_qwen35_9b() -> Trainer.Config:
+def qwen35_9b() -> Trainer.Config:
     return Trainer.Config(
         hf_assets_path=os.path.join(_SCRIPT_DIR, "assets", "hf", "Qwen3-8B"),
         model_spec=model_registry("qwen35-9B"),
@@ -67,7 +67,7 @@ def hft_qwen35_9b() -> Trainer.Config:
     )
 
 
-def hft_qwen35_9b_real() -> Trainer.Config:
+def qwen35_9b_real() -> Trainer.Config:
     return Trainer.Config(
         hf_assets_path=os.path.join(_SCRIPT_DIR, "assets", "hf", "Qwen3.5-9B"),
         model_spec=model_registry("qwen35-9B-real"),

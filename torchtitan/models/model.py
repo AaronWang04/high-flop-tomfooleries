@@ -5,16 +5,17 @@ import torch
 from torch import nn
 
 from torchtitan.models.common.attention import AttentionMasksType
-from torchtitan.models.common.decoder import Decoder, TransformerBlock
+from torchtitan.models.common.decoder import Decoder
+from torchtitan.models.common.decoder import TransformerBlock as _BaseTransformerBlock
 from torchtitan.models.utils import get_dense_model_nparams_and_flops
 from torchtitan.tools.logging import logger
 
 
-class HFTTransformerBlock(TransformerBlock):
+class TransformerBlock(_BaseTransformerBlock):
     """Pre-norm residual transformer block."""
 
     @dataclass(kw_only=True, slots=True)
-    class Config(TransformerBlock.Config):
+    class Config(_BaseTransformerBlock.Config):
         pass
 
     def __init__(self, config: Config):
@@ -39,7 +40,7 @@ class HFTTransformerBlock(TransformerBlock):
         return out
 
 
-class HFTModel(Decoder):
+class Model(Decoder):
 
     @dataclass(kw_only=True, slots=True)
     class Config(Decoder.Config):

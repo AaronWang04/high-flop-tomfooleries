@@ -32,12 +32,12 @@ from torchtitan.models.common.attention import FusedQKVLinear
 from torchtitan.protocols.model_converter import ModelConvertersContainer
 from torchtitan.tools.logging import logger
 
-from .model import HFTModel
+from .model import Model
 from .qwen35 import Qwen35FullAttentionBlock, Qwen35LinearAttentionBlock, Qwen35Model
 
 
-def parallelize_hft(
-    model: HFTModel,
+def parallelize(
+    model: Model,
     *,
     parallel_dims: ParallelDims,
     training: TrainingConfig,
