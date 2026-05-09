@@ -16,8 +16,11 @@ echo "==> Installing Megatron-LM from local clone..."
 pip install -e "${REPOS_DIR}/Megatron-LM"
 
 # --- Other dependencies ---
-echo "==> Installing other dependencies..."
-pip install -r "${SCRIPT_DIR}/requirements.txt"
+# Note: transformer-engine[pytorch] in requirements.txt compiles CUDA extensions
+# on first install — expect 5-10 minutes. Set NVTE_FRAMEWORK=pytorch to skip
+# unused framework builds (JAX, TensorFlow).
+echo "==> Installing other dependencies (TE build may take ~10 min)..."
+NVTE_FRAMEWORK=pytorch pip install -r "${SCRIPT_DIR}/requirements.txt"
 
 # --- Tokenizers ---
 echo "==> Downloading tokenizers..."

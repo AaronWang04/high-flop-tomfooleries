@@ -31,7 +31,7 @@ bash train.sh
 CONFIG=hft_llama_8b bash train.sh
 
 # Qwen3.5-9B (real hybrid architecture)
-CONFIG=hft_qwen35_9b_real bash train.sh
+CONFIG=qwen35_9b bash train.sh
 ```
 
 Config params

@@ -49,7 +49,43 @@ def qwen3_8b() -> Trainer.Config:
     )
 
 
-def qwen35_9b() -> Trainer.Config:
+def qwen35_4b() -> Trainer.Config:
+    return Trainer.Config(
+        hf_assets_path=os.path.join(_SCRIPT_DIR, "assets", "hf", "Qwen3.5-4B"),
+        model_spec=model_registry("qwen35-4B-real"),
+        optimizer=OptimizersContainer.Config(lr=3e-4),
+        training=TrainingConfig(
+            local_batch_size=1,
+            seq_len=4096,
+            steps=1_000_000,
+        ),
+        dataloader=HuggingFaceTextDataLoader.Config(dataset="fineweb"),
+        metrics=MetricsProcessor.Config(enable_tensorboard=True),
+        profiler=Profiler.Config(enable_profiling=True, profile_freq=100),
+        checkpoint=CheckpointManager.Config(enable=True, interval=500),
+        activation_checkpoint=ActivationCheckpointConfig(mode="selective"),
+    )
+
+
+def experimental_deltanet_4b() -> Trainer.Config:
+    return Trainer.Config(
+        hf_assets_path=os.path.join(_SCRIPT_DIR, "assets", "hf", "Qwen3.5-4B"),
+        model_spec=model_registry("experimental-deltanet-4B"),
+        optimizer=OptimizersContainer.Config(lr=3e-4),
+        training=TrainingConfig(
+            local_batch_size=1,
+            seq_len=4096,
+            steps=1_000_000,
+        ),
+        dataloader=HuggingFaceTextDataLoader.Config(dataset="fineweb"),
+        metrics=MetricsProcessor.Config(enable_tensorboard=True),
+        profiler=Profiler.Config(enable_profiling=True, profile_freq=100),
+        checkpoint=CheckpointManager.Config(enable=True, interval=500),
+        activation_checkpoint=ActivationCheckpointConfig(mode="selective"),
+    )
+
+
+def qwen35_9b_test() -> Trainer.Config:
     return Trainer.Config(
         hf_assets_path=os.path.join(_SCRIPT_DIR, "assets", "hf", "Qwen3-8B"),
         model_spec=model_registry("qwen35-9B"),
@@ -67,7 +103,7 @@ def qwen35_9b() -> Trainer.Config:
     )
 
 
-def qwen35_9b_real() -> Trainer.Config:
+def qwen35_9b() -> Trainer.Config:
     return Trainer.Config(
         hf_assets_path=os.path.join(_SCRIPT_DIR, "assets", "hf", "Qwen3.5-9B"),
         model_spec=model_registry("qwen35-9B-real"),

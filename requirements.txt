@@ -1,2 +1,13 @@
 # TorchTitan nightly and Megatron-LM are installed as editable local clones via setup.sh.
-flash-linear-attention
+
+# Required
+flash-linear-attention        # linear attn, Mamba2, NSA, MLA, GLA, RWKV7, Kimi Linear
+transformer-engine[pytorch]   # FP8/NVFP4 training; used by Megatron for all TE-backed layers
+                              # and by TorchTitan's float8 model converter
+                              # NVFP4 requires TE >= 2.7; latest is 2.14.0
+
+# Optional: faster Mamba2/Mamba CUDA kernels (Triton fallback used otherwise)
+# mamba-ssm
+
+# Optional: required for MultiheadLatentAttention (DeepSeek MLA)
+# flash-attn

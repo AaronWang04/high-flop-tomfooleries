@@ -285,10 +285,12 @@ def _build_qwen35_real_layers(
     linear_value_head_dim: int = 128,
     linear_conv_kernel: int = 4,
     hidden_dim: int = 12288,
+    layer_pattern: list[str] | None = None,
 ) -> list:
+    pattern = layer_pattern if layer_pattern is not None else _QWEN35_LAYER_PATTERN
     layers = []
     for i in range(n_layers):
-        layer_type = _QWEN35_LAYER_PATTERN[i % len(_QWEN35_LAYER_PATTERN)]
+        layer_type = pattern[i % len(pattern)]
 
         ffn = make_ffn_config(
             dim=dim,
@@ -329,6 +331,81 @@ def _build_qwen35_real_layers(
     return layers
 
 
+def _qwen35_4b_real(attn_backend: str = "sdpa") -> Qwen35Model.Config:
+    """Real Qwen3.5-4B: hybrid GatedDeltaNet + gated full attention."""
+    dim = 2560
+    head_dim = 256
+    partial_rotary_factor = 0.25
+    rotary_dim = int(head_dim * partial_rotary_factor)
+    vocab_size = 248320
+    return Qwen35Model.Config(
+        dim=dim,
+        vocab_size=vocab_size,
+        head_dim=head_dim,
+        partial_rotary_factor=partial_rotary_factor,
+        rope_theta=1e7,
+        tok_embeddings=Embedding.Config(
+            num_embeddings=vocab_size,
+            embedding_dim=dim,
+            param_init=_EMBEDDING_INIT,
+        ),
+        norm=_gemma_norm(dim),
+        output=Linear.Config(
+            in_features=dim,
+            out_features=vocab_size,
+            param_init=_output_linear_init(dim),
+        ),
+        rope=RoPE.Config(
+            dim=rotary_dim,
+            max_seq_len=8192,
+            theta=1e7,
+            backend="cos_sin",
+        ),
+        layers=_build_qwen35_real_layers(
+            dim=dim,
+            hidden_dim=9216,
+        ),
+    )
+
+
+def _experimental_deltanet_4b(attn_backend: str = "sdpa") -> Qwen35Model.Config:
+    """Experimental Qwen3.5-4B with all-DeltaNet layers (no softmax attention)."""
+    dim = 2560
+    head_dim = 256
+    partial_rotary_factor = 0.25
+    rotary_dim = int(head_dim * partial_rotary_factor)
+    vocab_size = 248320
+    return Qwen35Model.Config(
+        dim=dim,
+        vocab_size=vocab_size,
+        head_dim=head_dim,
+        partial_rotary_factor=partial_rotary_factor,
+        rope_theta=1e7,
+        tok_embeddings=Embedding.Config(
+            num_embeddings=vocab_size,
+            embedding_dim=dim,
+            param_init=_EMBEDDING_INIT,
+        ),
+        norm=_gemma_norm(dim),
+        output=Linear.Config(
+            in_features=dim,
+            out_features=vocab_size,
+            param_init=_output_linear_init(dim),
+        ),
+        rope=RoPE.Config(
+            dim=rotary_dim,
+            max_seq_len=8192,
+            theta=1e7,
+            backend="cos_sin",
+        ),
+        layers=_build_qwen35_real_layers(
+            dim=dim,
+            hidden_dim=9216,
+            layer_pattern=["linear_attention"],
+        ),
+    )
+
+
 def _qwen35_9b_real(attn_backend: str = "sdpa") -> Qwen35Model.Config:
     """Real Qwen3.5-9B: hybrid GatedDeltaNet + gated full attention."""
     dim = 4096
@@ -367,6 +444,8 @@ _configs = {
     "8B": _8b,
     "qwen3-8B": _qwen3_8b,
     "qwen35-9B": _qwen35_9b,
+    "qwen35-4B-real": _qwen35_4b_real,
+    "experimental-deltanet-4B": _experimental_deltanet_4b,
     "qwen35-9B-real": _qwen35_9b_real,
 }
 
@@ -376,7 +455,7 @@ def model_registry(
     attn_backend: str = "sdpa",
 ) -> ModelSpec:
     config = _configs[flavor](attn_backend=attn_backend)
-    par_fn = parallelize_qwen35 if flavor == "qwen35-9B-real" else parallelize
+    par_fn = parallelize_qwen35 if flavor in ("qwen35-4B-real", "experimental-deltanet-4B", "qwen35-9B-real") else parallelize
     return ModelSpec(
         name="models",
         flavor=flavor,

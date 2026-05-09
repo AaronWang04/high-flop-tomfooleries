@@ -4,3 +4,48 @@ __pycache__/
 *.pyc
 *.egg-info/
 .local/
+
+# Core dumps
+core
+core.*
+
+# Checkpoints / model weights
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.bin
+*.npz
+*.npy
+*.h5
+*.onnx
+checkpoints/
+checkpoint/
+checkpoint-*/
+
+# Training run artifacts
+wandb/
+tb_logs/
+tensorboard/
+runs/
+lightning_logs/
+mlruns/
+
+# Logs
+*.log
+logs/
+slurm-*.out
+*.out.txt
+
+# Archives
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
